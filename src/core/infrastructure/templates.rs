@@ -170,6 +170,17 @@ fn format_percentage(
     Ok(())
 }
 
+fn truncate_text(text: &str, max_length: usize) -> String {
+    let char_count = text.chars().count();
+
+    if char_count > max_length {
+        let prefix: String = text.chars().take(max_length.saturating_sub(3)).collect();
+        format!("{}...", prefix)
+    } else {
+        text.to_string()
+    }
+}
+
 fn truncate(
     h: &Helper,
     _: &Handlebars,
@@ -185,11 +196,7 @@ fn truncate(
         .and_then(|v| v.value().as_u64())
         .ok_or_else(|| RenderError::from(RenderErrorReason::Other("Max length parameter required".to_string())))? as usize;
 
-    let truncated = if text.len() > max_length {
-        format!("{}...", &text[..max_length.saturating_sub(3)])
-    } else {
-        text.to_string()
-    };
+    let truncated = truncate_text(text, max_length);
 
     out.write(&truncated)?;
     Ok(())
@@ -395,5 +402,21 @@ fn calculate_stats(tracks: &[DatabaseTrack]) -> TemplateStats {
         coverage_percentage: coverage,
         unique_artists,
         unique_albums,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::truncate_text;
+
+    #[test]
+    fn truncate_text_handles_multibyte_unicode() {
+        assert_eq!(truncate_text("Guns N’ Roses", 10), "Guns N’ ...");
+        assert_eq!(truncate_text("Björk", 5), "Björk");
+    }
+
+    #[test]
+    fn truncate_text_handles_very_small_limits_without_panicking() {
+        assert_eq!(truncate_text("éclair", 2), "...");
     }
 }
