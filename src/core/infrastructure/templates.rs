@@ -411,7 +411,7 @@ mod tests {
 
     #[test]
     fn truncate_text_handles_multibyte_unicode() {
-        assert_eq!(truncate_text("Guns N’ Roses", 10), "Guns N’ ...");
+        assert_eq!(truncate_text("Guns N’ Roses", 10), "Guns N’...");
         assert_eq!(truncate_text("Björk", 5), "Björk");
     }
 
