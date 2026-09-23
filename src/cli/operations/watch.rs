@@ -168,10 +168,13 @@ fn log_docker_session_stats(session: &WatchSession) {
 
 fn truncate_path_for_log(path: &PathBuf) -> String {
     let path_str = path.to_string_lossy();
-    if path_str.len() > 60 {
-        format!("...{}", &path_str[path_str.len() - 57..])
+    let char_count = path_str.chars().count();
+
+    if char_count > 60 {
+        let tail: String = path_str.chars().skip(char_count - 57).collect();
+        format!("...{}", tail)
     } else {
-        path_str.to_string()
+        path_str.into_owned()
     }
 }
 
@@ -536,4 +539,26 @@ async fn update_track_lyrics_in_db(
     // This is because the downloader saves files to disk but doesn't return the paths
     // The database will be updated when the files are scanned again
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::truncate_path_for_log;
+    use std::path::PathBuf;
+
+    #[test]
+    fn truncate_path_for_log_handles_multibyte_unicode_at_boundary() {
+        let path = PathBuf::from("/music/Metallica/…And Justice for All (1988)/03 - Eye of the Beholder.flac");
+        let truncated = truncate_path_for_log(&path);
+
+        assert!(truncated.starts_with("..."));
+        assert!(truncated.ends_with("03 - Eye of the Beholder.flac"));
+        assert_eq!(truncated.chars().count(), 60);
+    }
+
+    #[test]
+    fn truncate_path_for_log_leaves_short_unicode_paths_unchanged() {
+        let path = PathBuf::from("/music/Björk/Jóga.flac");
+        assert_eq!(truncate_path_for_log(&path), "/music/Björk/Jóga.flac");
+    }
 }
